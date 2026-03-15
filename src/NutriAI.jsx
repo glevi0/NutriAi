@@ -19,8 +19,8 @@ const gradHover = `linear-gradient(135deg, ${C.goldDark}, ${C.goldDeep})`;
 // ── Claude API helper ──────────────────────────────────────────────────────────
 async function callClaude(systemPrompt, userPrompt, maxTokens = 1000) {
   const res = await fetch("/api/proxy", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       model: "claude-sonnet-4-20250514",
       max_tokens: maxTokens,
