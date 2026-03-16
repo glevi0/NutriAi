@@ -28,7 +28,12 @@ async function callClaude(systemPrompt, userPrompt, maxTokens = 1000) {
       messages: [{ role: "user", content: userPrompt }],
     }),
   });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`API error ${res.status}: ${err}`);
+  }
   const data = await res.json();
+  if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
   return data.content?.map(b => b.text || "").join("") || "";
 }
 
@@ -1009,6 +1014,7 @@ function Dashboard({ profile, setProfile, onLogout }) {
   const today = new Date();
   const [selectedDate, setSelectedDate] = useState(today);
   const [generating, setGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState(null);
   const [regenMeal, setRegenMeal] = useState(null);
   const [activeTab, setActiveTab] = useState("plan");
   const [activeMeal, setActiveMeal] = useState(null); // { meal, mealType }
@@ -1107,8 +1113,10 @@ Only include snacks/pre_workout/post_workout sections if requested or if multipl
         fat: Math.round((data.breakfast?.fat||0)+(data.lunch?.fat||0)+(data.dinner?.fat||0)+(data.snacks||[]).reduce((s,x)=>s+(x.fat||0),0)+(data.pre_workout?.fat||0)+(data.post_workout?.fat||0)),
       };
       saveMealPlan(plan);
+      setGenerateError(null);
     } catch (e) {
       console.error(e);
+      setGenerateError(e.message || "Something went wrong. Please try again.");
     } finally {
       setGenerating(false);
     }
@@ -1286,10 +1294,18 @@ Return JSON: {"name":"","description":"","calories":0,"protein":0,"carbs":0,"fat
 
             {/* Generate Button */}
             <div style={{ marginBottom: 16 }}>
-              <Btn onClick={generatePlan} disabled={generating} style={{ width: "100%", height: 52, fontSize: 15, borderRadius: 16 }}>
+              <Btn onClick={() => { setGenerateError(null); generatePlan(); }} disabled={generating} style={{ width: "100%", height: 52, fontSize: 15, borderRadius: 16 }}>
                 {generating ? <><Spinner size={18} color={C.white} /> Generating your plan...</> : mealPlan ? "🔄 Regenerate Plan" : "✨ Generate My Meal Plan"}
               </Btn>
             </div>
+
+            {/* Error display */}
+            {generateError && (
+              <Card style={{ padding: "16px 20px", marginBottom: 16, background: "#FFF5F5", border: `1.5px solid #FECACA` }}>
+                <div style={{ fontWeight: 700, fontSize: 14, color: "#DC2626", marginBottom: 4 }}>⚠️ Generation failed</div>
+                <div style={{ fontSize: 13, color: "#991B1B", lineHeight: 1.5, wordBreak: "break-all" }}>{generateError}</div>
+              </Card>
+            )}
 
             {/* Generating animation */}
             {generating && (
